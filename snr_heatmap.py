@@ -77,14 +77,13 @@ def radial_psd(batch: torch.Tensor, num_bins: int) -> torch.Tensor:
     bin_edges = torch.linspace(0, max_radius, steps=num_bins + 1, device=batch.device)
 
     psd = torch.zeros(num_bins, device=batch.device)
+    counts = torch.zeros(num_bins, device=batch.device)
     for i in range(num_bins):
         mask = (radial >= bin_edges[i]) & (radial < bin_edges[i + 1])
-        count = mask.sum()
-        if count > 0:
-            # Average over spatial positions for each sample then across the batch
-            masked_power = (power * mask).sum(dim=(1, 2)) / count
-            psd[i] = masked_power.mean()
-    return psd
+        counts[i] = mask.sum()
+        if counts[i] > 0:
+            psd[i] = (power * mask).sum() / counts[i]
+    return psd.mean(dim=0)  # average over batch
 
 
 def schedule_alphas(scheduler: DDPMScheduler, num_bins: int) -> Tuple[torch.Tensor, torch.Tensor]:
